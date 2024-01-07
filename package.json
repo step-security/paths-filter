@@ -28,7 +28,7 @@
     "@actions/core": "^1.10.0",
     "@actions/exec": "^1.1.1",
     "@actions/github": "^2.2.0",
-    "@octokit/webhooks": "^7.6.2",
+    "@octokit/webhooks": "^9.26.3",
     "picomatch": "^2.2.2"
   },
   "devDependencies": {
