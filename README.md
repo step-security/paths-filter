@@ -48,7 +48,7 @@ don't allow this because they don't work on a level of individual jobs or steps.
 ## Example
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
   id: changes
   with:
     filters: |
@@ -72,10 +72,19 @@ For more scenarios see [examples](#examples) section.
 - Local execution with [act](https://github.com/nektos/act) works only with alternative runner image. Default runner doesn't have `git` binary.
   - Use: `act -P ubuntu-latest=nektos/act-environments-ubuntu:18.04`
 
+## What's New
+
+- New major release `v3` after update to Node 20 [Breaking change]
+- Add `ref` input parameter
+- Add `list-files: csv` format
+- Configure matrix job to run for each folder with changes using `changes` output
+- Improved listing of matching files with `list-files: shell` and `list-files: escape` options
+- Paths expressions are now evaluated using [picomatch](https://github.com/micromatch/picomatch) library
+
 ## Usage
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
   with:
     # Defines filters applied to detected changed files.
     # Each filter has a name and a list of rules.
@@ -144,6 +153,22 @@ For more scenarios see [examples](#examples) section.
     # changes using git commands.
     # Default: ${{ github.token }}
     token: ''
+
+    # Optional parameter to override the default behavior of file matching algorithm. 
+    # By default files that match at least one pattern defined by the filters will be included.
+    # This parameter allows to override the "at least one pattern" behavior to make it so that
+    # all of the patterns have to match or otherwise the file is excluded. 
+    # An example scenario where this is useful if you would like to match all 
+    # .ts files in a sub-directory but not .md files. 
+    # The filters below will match markdown files despite the exclusion syntax UNLESS 
+    # you specify 'every' as the predicate-quantifier parameter. When you do that, 
+    # it will only match the .ts files in the subdirectory as expected.
+    #
+    # backend:
+    #  - 'pkg/a/b/c/**'
+    #  - '!**/*.jpeg'
+    #  - '!**/*.md'
+    predicate-quantifier: 'some'
 ```
 
 ## Outputs
@@ -167,8 +192,8 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: step-security/paths-filter@v2
+    - uses: actions/checkout@v4
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         filters: |
@@ -212,7 +237,7 @@ jobs:
       frontend: ${{ steps.filter.outputs.frontend }}
     steps:
     # For pull requests it's not necessary to checkout the code
-    - uses: step-security/paths-filter@v2
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         filters: |
@@ -227,7 +252,7 @@ jobs:
     if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - ...
 
   # JOB to build and test frontend code
@@ -236,7 +261,7 @@ jobs:
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - ...
 ```
 
@@ -258,7 +283,7 @@ jobs:
       packages: ${{ steps.filter.outputs.changes }}
     steps:
     # For pull requests it's not necessary to checkout the code
-    - uses: step-security/paths-filter@v2
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         filters: |
@@ -275,7 +300,7 @@ jobs:
         package: ${{ fromJSON(needs.changes.outputs.packages) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - ...
 ```
 
@@ -299,8 +324,8 @@ jobs:
     permissions:
       pull-requests: read
     steps:
-    - uses: actions/checkout@v3
-    - uses: step-security/paths-filter@v2
+    - uses: actions/checkout@v4
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         filters: ... # Configure your filters
@@ -320,12 +345,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         # This may save additional git fetch roundtrip if
         # merge-base is found within latest 20 commits
         fetch-depth: 20
-    - uses: step-security/paths-filter@v2
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         base: develop # Change detection against merge-base with this branch
@@ -348,8 +373,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: step-security/paths-filter@v2
+    - uses: actions/checkout@v4
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         # Use context to get the branch where commits were pushed.
@@ -376,14 +401,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
       # Some action that modifies files tracked by git (e.g. code linter)
     - uses: johndoe/some-action@v1
 
       # Filter to detect which files were modified
       # Changes could be, for example, automatically committed
-    - uses: step-security/paths-filter@v2
+    - uses: step-security/paths-filter@v3
       id: filter
       with:
         base: HEAD
@@ -398,7 +423,7 @@ jobs:
   <summary>Define filter rules in own file</summary>
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
       id: filter
       with:
         # Path to file where filters are defined
@@ -411,7 +436,7 @@ jobs:
   <summary>Use YAML anchors to reuse path expression(s) inside another rule</summary>
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
       id: filter
       with:
         # &shared is YAML anchor,
@@ -432,7 +457,7 @@ jobs:
   <summary>Consider if file was added, modified or deleted</summary>
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
       id: filter
       with:
         # Changed file can be 'added', 'modified', or 'deleted'.
@@ -454,13 +479,39 @@ jobs:
 
 </details>
 
+<details>
+  <summary>Detect changes in folder only for some file extensions</summary>
+
+```yaml
+- uses: step-security/paths-filter@v3
+      id: filter
+      with:
+        # This makes it so that all the patterns have to match a file for it to be
+        # considered changed. Because we have the exclusions for .jpeg and .md files
+        # the end result is that if those files are changed they will be ignored
+        # because they don't match the respective rules excluding them.
+        #
+        # This can be leveraged to ensure that you only build & test software changes
+        # that have real impact on the behavior of the code, e.g. you can set up your
+        # build to run when Typescript/Rust/etc. files are changed but markdown
+        # changes in the diff will be ignored and you consume less resources to build.
+        predicate-quantifier: 'every'
+        filters: |
+          backend:
+            - 'pkg/a/b/c/**'
+            - '!**/*.jpeg'
+            - '!**/*.md'
+```
+
+</details>
+
 ### Custom processing of changed files
 
 <details>
   <summary>Passing list of modified files as command line args in Linux shell</summary>
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
   id: filter
   with:
     # Enable listing of files matching each filter.
@@ -486,7 +537,7 @@ jobs:
   <summary>Passing list of modified files as JSON array to another action</summary>
 
 ```yaml
-- uses: step-security/paths-filter@v2
+- uses: step-security/paths-filter@v3
   id: filter
   with:
     # Enable listing of files matching each filter.

@@ -1,10 +1,17 @@
 import * as fs from 'fs'
 import * as core from '@actions/core'
 import * as github from '@actions/github'
-import type {Octokit} from '@octokit/rest'
-import {Webhooks} from '@octokit/webhooks'
+import {GetResponseDataTypeFromEndpointMethod} from '@octokit/types'
+import {PushEvent, PullRequestEvent} from '@octokit/webhooks-types'
 
-import {Filter, FilterResults} from './filter'
+import {
+  isPredicateQuantifier,
+  Filter,
+  FilterConfig,
+  FilterResults,
+  PredicateQuantifier,
+  SUPPORTED_PREDICATE_QUANTIFIERS
+} from './filter'
 import {File, ChangeStatus} from './file'
 import * as git from './git'
 import {backslashEscape, shellEscape} from './list-format/shell-escape'
@@ -62,19 +69,28 @@ async function run(): Promise<void> {
     const filtersYaml = isPathInput(filtersInput) ? getConfigFileContent(filtersInput) : filtersInput
     const listFiles = core.getInput('list-files', {required: false}).toLowerCase() || 'none'
     const initialFetchDepth = parseInt(core.getInput('initial-fetch-depth', {required: false})) || 10
+    const predicateQuantifier = core.getInput('predicate-quantifier', {required: false}) || PredicateQuantifier.SOME
 
     if (!isExportFormat(listFiles)) {
       core.setFailed(`Input parameter 'list-files' is set to invalid value '${listFiles}'`)
       return
     }
 
-    const filter = new Filter(filtersYaml)
+    if (!isPredicateQuantifier(predicateQuantifier)) {
+      const predicateQuantifierInvalidErrorMsg =
+        `Input parameter 'predicate-quantifier' is set to invalid value ` +
+        `'${predicateQuantifier}'. Valid values: ${SUPPORTED_PREDICATE_QUANTIFIERS.join(', ')}`
+      throw new Error(predicateQuantifierInvalidErrorMsg)
+    }
+    const filterConfig: FilterConfig = {predicateQuantifier}
+
+    const filter = new Filter(filtersYaml, filterConfig)
     const files = await getChangedFiles(token, base, ref, initialFetchDepth)
     core.info(`Detected ${files.length} changed files`)
     const results = filter.match(files)
     exportResults(results, listFiles)
   } catch (error) {
-    core.setFailed(error.message)
+    core.setFailed(getErrorMessage(error))
   }
 }
 
@@ -112,7 +128,7 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
     if (base) {
       core.warning(`'base' input parameter is ignored when action is triggered by pull request event`)
     }
-    const pr = github.context.payload.pull_request as Webhooks.WebhookPayloadPullRequestPullRequest
+    const pr = github.context.payload.pull_request as PullRequestEvent
     if (token) {
       return await getChangedFilesFromApi(token, pr)
     }
@@ -122,8 +138,11 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
       // At the same time we don't want to fetch any code from forked repository
       throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`)
     }
-    core.info('Github token is not available - changes will be detected from PRs merge commit')
-    return await git.getChangesInLastCommit()
+    core.info('Github token is not available - changes will be detected using git diff')
+    const baseSha = github.context.payload.pull_request?.base.sha
+    const defaultBranch = github.context.payload.repository?.default_branch
+    const currentRef = await git.getCurrentRef()
+    return await git.getChanges(base || baseSha || defaultBranch, currentRef)
   } else {
     return getChangedFilesFromGit(base, ref, initialFetchDepth)
   }
@@ -132,8 +151,7 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
 async function getChangedFilesFromGit(base: string, head: string, initialFetchDepth: number): Promise<File[]> {
   const defaultBranch = github.context.payload.repository?.default_branch
 
-  const beforeSha =
-    github.context.eventName === 'push' ? (github.context.payload as Webhooks.WebhookPayloadPush).before : null
+  const beforeSha = github.context.eventName === 'push' ? (github.context.payload as PushEvent).before : null
 
   const currentRef = await git.getCurrentRef()
 
@@ -193,31 +211,28 @@ async function getChangedFilesFromGit(base: string, head: string, initialFetchDe
 }
 
 // Uses github REST api to get list of files changed in PR
-async function getChangedFilesFromApi(
-  token: string,
-  prNumber: Webhooks.WebhookPayloadPullRequestPullRequest
-): Promise<File[]> {
-  core.startGroup(`Fetching list of changed files for PR#${prNumber.number} from Github API`)
+async function getChangedFilesFromApi(token: string, pullRequest: PullRequestEvent): Promise<File[]> {
+  core.startGroup(`Fetching list of changed files for PR#${pullRequest.number} from Github API`)
   try {
-    const client = new github.GitHub(token)
+    const client = github.getOctokit(token)
     const per_page = 100
     const files: File[] = []
 
-    core.info(`Invoking listFiles(pull_number: ${prNumber.number}, per_page: ${per_page})`)
+    core.info(`Invoking listFiles(pull_number: ${pullRequest.number}, per_page: ${per_page})`)
     for await (const response of client.paginate.iterator(
-      client.pulls.listFiles.endpoint.merge({
+      client.rest.pulls.listFiles.endpoint.merge({
         owner: github.context.repo.owner,
         repo: github.context.repo.repo,
-        pull_number: prNumber.number,
+        pull_number: pullRequest.number,
         per_page
       })
-    ) as AsyncIterableIterator<Octokit.Response<Octokit.PullsListFilesResponse>>) {
+    )) {
       if (response.status !== 200) {
         throw new Error(`Fetching list of changed files from GitHub API failed with error code ${response.status}`)
       }
       core.info(`Received ${response.data.length} items`)
 
-      for (const row of response.data) {
+      for (const row of response.data as GetResponseDataTypeFromEndpointMethod<typeof client.rest.pulls.listFiles>) {
         core.info(`[${row.status}] ${row.filename}`)
         // There's no obvious use-case for detection of renames
         // Therefore we treat it as if rename detection in git diff was turned off.
@@ -301,6 +316,11 @@ function serializeExport(files: File[], format: ExportFormat): string {
 
 function isExportFormat(value: string): value is ExportFormat {
   return ['none', 'csv', 'shell', 'json', 'escape'].includes(value)
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+  return String(error)
 }
 
 run()
