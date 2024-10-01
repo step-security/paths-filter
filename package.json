@@ -8,13 +8,13 @@
   "description": "Execute your workflow steps only if relevant files are modified.",
   "main": "lib/main.js",
   "scripts": {
-    "build": "tsc",
+    "pre-build": "tsc",
     "format": "prettier --write **/*.ts",
     "format-check": "prettier --check **/*.ts",
     "lint": "eslint src/**/*.ts",
-    "pack": "ncc build",
+    "build": "ncc build",
     "test": "jest",
-    "all": "npm run build && npm run format && npm run lint && npm run pack && npm test"
+    "all": "npm run pre-build && npm run format && npm run lint && npm run build && npm test"
   },
   "repository": {
     "type": "git",
