@@ -6,6 +6,11 @@ on:
       tag:
         description: "Tag for the release"
         required: true
+      script:
+        description: "Specify the build script to run"
+        required: false
+        type: string
+        default: "npm run all"
 
 permissions:
   contents: read
