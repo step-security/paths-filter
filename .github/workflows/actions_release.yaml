@@ -24,3 +24,4 @@ jobs:
     uses: step-security/reusable-workflows/.github/workflows/actions_release.yaml@v1
     with:
       tag: "${{ github.event.inputs.tag }}"
+      script: "${{ github.event.inputs.script }}"
