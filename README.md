@@ -493,7 +493,7 @@ jobs:
         #
         # This can be leveraged to ensure that you only build & test software changes
         # that have real impact on the behavior of the code, e.g. you can set up your
-        # build to run when Typescript/Rust/etc. files are changed but markdown
+        # build to run when TypeScript/Rust/etc. files are changed but markdown
         # changes in the diff will be ignored and you consume less resources to build.
         predicate-quantifier: 'every'
         filters: |
