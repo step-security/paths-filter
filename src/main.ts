@@ -138,7 +138,7 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
       // At the same time we don't want to fetch any code from forked repository
       throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`)
     }
-    core.info('Github token is not available - changes will be detected using git diff')
+    core.info('GitHub token is not available - changes will be detected using git diff')
     const baseSha = github.context.payload.pull_request?.base.sha
     const defaultBranch = github.context.payload.repository?.default_branch
     const currentRef = await git.getCurrentRef()
