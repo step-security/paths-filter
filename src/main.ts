@@ -3,6 +3,7 @@ import * as core from '@actions/core'
 import * as github from '@actions/github'
 import {GetResponseDataTypeFromEndpointMethod} from '@octokit/types'
 import {PushEvent, PullRequestEvent} from '@octokit/webhooks-types'
+import axios, {isAxiosError} from 'axios'
 
 import {
   isPredicateQuantifier,
@@ -22,34 +23,14 @@ type ExportFormat = 'none' | 'csv' | 'json' | 'shell' | 'escape'
 async function validateSubscription(): Promise<void> {
   const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`
 
-  // Create a promise that rejects after a timeout
-  const timeoutPromise = new Promise<Response>((_, reject) =>
-    setTimeout(() => reject(new Error('Request timed out')), 3000)
-  )
-
   try {
-    // Race the fetch call against the timeout
-    const response = await Promise.race([fetch(API_URL, {method: 'GET'}), timeoutPromise])
-
-    if (!(response instanceof Response)) {
-      throw new Error('Invalid response object')
-    }
-
-    if (!response.ok) {
-      throw new Error('Network response was not ok')
-    }
+    await axios.get(API_URL, {timeout: 3000})
   } catch (error) {
-    if (error instanceof Error) {
-      if (error.message === 'Network response was not ok') {
-        core.error('Subscription is not valid. Reach out to support@stepsecurity.io')
-        process.exit(1)
-      } else if (error.message === 'Request timed out') {
-        core.info('Timeout or API not reachable. Continuing to next step.')
-      } else {
-        core.error('An unexpected error occurred: ' + error.message)
-      }
+    if (isAxiosError(error) && error.response?.status === 403) {
+      core.error('Subscription is not valid. Reach out to support@stepsecurity.io')
+      process.exit(1)
     } else {
-      core.error('An unknown error occurred.')
+      core.info('Timeout or API not reachable. Continuing to next step.')
     }
   }
 }
