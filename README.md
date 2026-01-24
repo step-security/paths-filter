@@ -154,14 +154,14 @@ For more scenarios see [examples](#examples) section.
     # Default: ${{ github.token }}
     token: ''
 
-    # Optional parameter to override the default behavior of file matching algorithm. 
+    # Optional parameter to override the default behavior of file matching algorithm.
     # By default files that match at least one pattern defined by the filters will be included.
     # This parameter allows to override the "at least one pattern" behavior to make it so that
-    # all of the patterns have to match or otherwise the file is excluded. 
-    # An example scenario where this is useful if you would like to match all 
-    # .ts files in a sub-directory but not .md files. 
-    # The filters below will match markdown files despite the exclusion syntax UNLESS 
-    # you specify 'every' as the predicate-quantifier parameter. When you do that, 
+    # all of the patterns have to match or otherwise the file is excluded.
+    # An example scenario where this is useful if you would like to match all
+    # .ts files in a sub-directory but not .md files.
+    # The filters below will match markdown files despite the exclusion syntax UNLESS
+    # you specify 'every' as the predicate-quantifier parameter. When you do that,
     # it will only match the .ts files in the subdirectory as expected.
     #
     # backend:
@@ -493,7 +493,7 @@ jobs:
         #
         # This can be leveraged to ensure that you only build & test software changes
         # that have real impact on the behavior of the code, e.g. you can set up your
-        # build to run when Typescript/Rust/etc. files are changed but markdown
+        # build to run when TypeScript/Rust/etc. files are changed but markdown
         # changes in the diff will be ignored and you consume less resources to build.
         predicate-quantifier: 'every'
         filters: |
