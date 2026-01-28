@@ -11,6 +11,11 @@ on:
         required: false
         type: string
         default: "npm run all"
+      node_version:
+        description: "Specify Node.js version"
+        required: false
+        type: string
+        default: "24"
 
 permissions:
   contents: read
@@ -25,3 +30,4 @@ jobs:
     with:
       tag: "${{ github.event.inputs.tag }}"
       script: "${{ github.event.inputs.script }}"
+      node_version: ${{ github.event.inputs.node_version }}
