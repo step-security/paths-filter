@@ -677,8 +677,8 @@ async function getChangedFiles(token, base, ref, initialFetchDepth) {
                 throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`);
             }
             core.info('Github token is not available - changes will be detected using git diff');
-            const baseSha = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.sha;
-            const defaultBranch = (_b = github.context.payload.repository) === null || _b === void 0 ? void 0 : _b.default_branch;
+            const baseSha = github.context.payload.pull_request?.base.sha;
+            const defaultBranch = github.context.payload.repository?.default_branch;
             const currentRef = await git.getCurrentRef();
             return await git.getChanges(base || baseSha || defaultBranch, currentRef);
         }
