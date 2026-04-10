@@ -97,10 +97,11 @@ function isPredicateQuantifier(x) {
 }
 exports.isPredicateQuantifier = isPredicateQuantifier;
 class Filter {
+    filterConfig;
+    rules = {};
     // Creates instance of Filter and load rules from YAML if it's provided
     constructor(yaml, filterConfig) {
         this.filterConfig = filterConfig;
-        this.rules = {};
         if (yaml) {
             this.load(yaml);
         }
@@ -126,11 +127,10 @@ class Filter {
         return result;
     }
     isMatch(file, patterns) {
-        var _a;
         const aPredicate = (rule) => {
             return (rule.status === undefined || rule.status.includes(file.status)) && rule.isMatch(file.filename);
         };
-        if (((_a = this.filterConfig) === null || _a === void 0 ? void 0 : _a.predicateQuantifier) === 'every') {
+        if (this.filterConfig?.predicateQuantifier === 'every') {
             return patterns.every(aPredicate);
         }
         else {
@@ -272,14 +272,14 @@ async function getChangesSinceMergeBase(base, head, initialFetchDepth) {
         if (!(await hasMergeBase())) {
             await (0, exec_1.getExecOutput)('git', ['fetch', '--no-tags', `--depth=${initialFetchDepth}`, 'origin', base, head]);
             if (baseRef === undefined || headRef === undefined) {
-                baseRef = baseRef !== null && baseRef !== void 0 ? baseRef : (await getLocalRef(base));
-                headRef = headRef !== null && headRef !== void 0 ? headRef : (await getLocalRef(head));
+                baseRef = baseRef ?? (await getLocalRef(base));
+                headRef = headRef ?? (await getLocalRef(head));
                 if (baseRef === undefined || headRef === undefined) {
                     await (0, exec_1.getExecOutput)('git', ['fetch', '--tags', '--depth=1', 'origin', base, head], {
                         ignoreReturnCode: true // returns exit code 1 if tags on remote were updated - we can safely ignore it
                     });
-                    baseRef = baseRef !== null && baseRef !== void 0 ? baseRef : (await getLocalRef(base));
-                    headRef = headRef !== null && headRef !== void 0 ? headRef : (await getLocalRef(head));
+                    baseRef = baseRef ?? (await getLocalRef(base));
+                    headRef = headRef ?? (await getLocalRef(head));
                     if (baseRef === undefined) {
                         throw new Error(`Could not determine what is ${base} - fetch works but it's not a branch, tag or commit SHA`);
                     }
@@ -411,7 +411,7 @@ async function getLocalRef(shortName) {
         .split(/\r?\n/g)
         .map(l => l.match(/refs\/(?:(?:heads)|(?:tags)|(?:remotes\/origin))\/(.*)$/))
         .filter(match => match !== null && match[1] === shortName)
-        .map(match => { var _a; return (_a = match === null || match === void 0 ? void 0 : match[0]) !== null && _a !== void 0 ? _a : ''; }); // match can't be null here but compiler doesn't understand that
+        .map(match => match?.[0] ?? ''); // match can't be null here but compiler doesn't understand that
     if (refs.length === 0) {
         return undefined;
     }
@@ -563,19 +563,38 @@ const git = __importStar(__nccwpck_require__(3374));
 const shell_escape_1 = __nccwpck_require__(4613);
 const csv_escape_1 = __nccwpck_require__(7402);
 async function validateSubscription() {
-    var _a;
-    const API_URL = `https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/subscription`;
+    const eventPath = process.env.GITHUB_EVENT_PATH;
+    let repoPrivate;
+    if (eventPath && fs.existsSync(eventPath)) {
+        const eventData = JSON.parse(fs.readFileSync(eventPath, 'utf8'));
+        repoPrivate = eventData?.repository?.private;
+    }
+    const upstream = 'dorny/paths-filter';
+    const action = process.env.GITHUB_ACTION_REPOSITORY;
+    const docsUrl = 'https://docs.stepsecurity.io/actions/stepsecurity-maintained-actions';
+    core.info('');
+    core.info('\u001b[1;36mStepSecurity Maintained Action\u001b[0m');
+    core.info(`Secure drop-in replacement for ${upstream}`);
+    if (repoPrivate === false)
+        core.info('\u001b[32m\u2713 Free for public repositories\u001b[0m');
+    core.info(`\u001b[36mLearn more:\u001b[0m ${docsUrl}`);
+    core.info('');
+    if (repoPrivate === false)
+        return;
+    const serverUrl = process.env.GITHUB_SERVER_URL || 'https://github.com';
+    const body = { action: action || '' };
+    if (serverUrl !== 'https://github.com')
+        body.ghes_server = serverUrl;
     try {
-        await axios_1.default.get(API_URL, { timeout: 3000 });
+        await axios_1.default.post(`https://agent.api.stepsecurity.io/v1/github/${process.env.GITHUB_REPOSITORY}/actions/maintained-actions-subscription`, body, { timeout: 3000 });
     }
     catch (error) {
-        if ((0, axios_1.isAxiosError)(error) && ((_a = error.response) === null || _a === void 0 ? void 0 : _a.status) === 403) {
-            core.error('Subscription is not valid. Reach out to support@stepsecurity.io');
+        if ((0, axios_1.isAxiosError)(error) && error.response?.status === 403) {
+            core.error(`\u001b[1;31mThis action requires a StepSecurity subscription for private repositories.\u001b[0m`);
+            core.error(`\u001b[31mLearn how to enable a subscription: ${docsUrl}\u001b[0m`);
             process.exit(1);
         }
-        else {
-            core.info('Timeout or API not reachable. Continuing to next step.');
-        }
+        core.info('Timeout or API not reachable. Continuing to next step.');
     }
 }
 async function run() {
@@ -626,7 +645,6 @@ function getConfigFileContent(configPath) {
     return fs.readFileSync(configPath, { encoding: 'utf8' });
 }
 async function getChangedFiles(token, base, ref, initialFetchDepth) {
-    var _a, _b;
     // if base is 'HEAD' only local uncommitted changes will be detected
     // This is the simplest case as we don't need to fetch more commits or evaluate current/before refs
     if (base === git.HEAD) {
@@ -659,8 +677,8 @@ async function getChangedFiles(token, base, ref, initialFetchDepth) {
                 throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`);
             }
             core.info('Github token is not available - changes will be detected using git diff');
-            const baseSha = (_a = github.context.payload.pull_request) === null || _a === void 0 ? void 0 : _a.base.sha;
-            const defaultBranch = (_b = github.context.payload.repository) === null || _b === void 0 ? void 0 : _b.default_branch;
+            const baseSha = github.context.payload.pull_request?.base.sha;
+            const defaultBranch = github.context.payload.repository?.default_branch;
             const currentRef = await git.getCurrentRef();
             return await git.getChanges(base || baseSha || defaultBranch, currentRef);
         }
@@ -680,8 +698,7 @@ async function getChangedFiles(token, base, ref, initialFetchDepth) {
     return getChangedFilesFromGit(base, ref, initialFetchDepth);
 }
 async function getChangedFilesFromGit(base, head, initialFetchDepth) {
-    var _a;
-    const defaultBranch = (_a = github.context.payload.repository) === null || _a === void 0 ? void 0 : _a.default_branch;
+    const defaultBranch = github.context.payload.repository?.default_branch;
     const beforeSha = github.context.eventName === 'push' ? github.context.payload.before : null;
     const currentRef = await git.getCurrentRef();
     head = git.getShortName(head || github.context.ref || currentRef);
