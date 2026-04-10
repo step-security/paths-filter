@@ -10,6 +10,13 @@ on:
       script:
         required: false
         default: "npm run all"
+      mode:
+        description: "Run mode: cherry-pick or verify"
+        required: false
+        default: "cherry-pick"
+
+  pull_request:
+    types: [opened, synchronize, labeled]
 
 permissions:
   contents: write
@@ -25,3 +32,4 @@ jobs:
       repo-name: "paths-filter"
       base_branch: ${{ inputs.base_branch }}
       script: ${{ inputs.script }}
+      mode: ${{ github.event_name == 'pull_request' && 'verify' || inputs.mode }}
