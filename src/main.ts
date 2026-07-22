@@ -15,6 +15,7 @@ import {
 } from './filter'
 import {File, ChangeStatus} from './file'
 import * as git from './git'
+import {cleanup as cleanupSafeDirectory} from './safe-directory'
 import {backslashEscape, shellEscape} from './list-format/shell-escape'
 import {csvEscape} from './list-format/csv-escape'
 
@@ -98,6 +99,8 @@ async function run(): Promise<void> {
     exportResults(results, listFiles)
   } catch (error) {
     core.setFailed(getErrorMessage(error))
+  } finally {
+    await cleanupSafeDirectory()
   }
 }
 
@@ -135,7 +138,7 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
     case 'pull_request_review_comment':
     case 'pull_request_target': {
       if (ref) {
-        core.warning(`'ref' input parameter is ignored when 'base' is set to HEAD`)
+        core.warning(`'ref' input parameter is ignored when action is triggered by pull request event`)
       }
       if (base) {
         core.warning(`'base' input parameter is ignored when action is triggered by pull request event`)
@@ -150,7 +153,7 @@ async function getChangedFiles(token: string, base: string, ref: string, initial
         // At the same time we don't want to fetch any code from forked repository
         throw new Error(`'token' input parameter is required if action is triggered by 'pull_request_target' event`)
       }
-      core.info('Github token is not available - changes will be detected using git diff')
+      core.info('GitHub token is not available - changes will be detected using git diff')
       const baseSha = github.context.payload.pull_request?.base.sha
       const defaultBranch = github.context.payload.repository?.default_branch
       const currentRef = await git.getCurrentRef()
@@ -237,7 +240,7 @@ async function getChangedFilesFromGit(base: string, head: string, initialFetchDe
 
 // Uses github REST api to get list of files changed in PR
 async function getChangedFilesFromApi(token: string, pullRequest: PullRequest): Promise<File[]> {
-  core.startGroup(`Fetching list of changed files for PR#${pullRequest.number} from Github API`)
+  core.startGroup(`Fetching list of changed files for PR#${pullRequest.number} from GitHub API`)
   try {
     const client = github.getOctokit(token)
     const per_page = 100
