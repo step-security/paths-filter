@@ -54,4 +54,16 @@ describe('shellEscape() returns human readable filenames with as few escaping ap
   test('filename with single quote and special characters is split and quoted/escaped as needed', () => {
     expect(shellEscape("file'with $quote")).toBe("file\\''with $quote'")
   })
+
+  test('filename with LF should be single-quoted', () => {
+    expect(shellEscape('x\ntouch pwned.md')).toBe("'x\ntouch pwned.md'")
+  })
+
+  test('filename with CRLF should be single-quoted', () => {
+    expect(shellEscape('x\r\ntouch pwned.md')).toBe("'x\r\ntouch pwned.md'")
+  })
+
+  test('filename with CR should be single-quoted', () => {
+    expect(shellEscape('a\rb')).toBe("'a\rb'")
+  })
 })
