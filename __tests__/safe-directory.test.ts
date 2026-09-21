@@ -254,4 +254,3 @@ describe('ensureSafeDirectory', () => {
     expect(env['LC_ALL']).toBe('C')
   })
 })
-
