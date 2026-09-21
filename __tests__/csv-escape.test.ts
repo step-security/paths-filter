@@ -20,4 +20,12 @@ describe('csvEscape() backslash escapes every character except subset of definit
   test('Double quote should be escaped by another double quote', () => {
     expect(csvEscape('file " with double quote')).toBe('"file "" with double quote"')
   })
+
+  test('filename with LF should be quoted per RFC 4180', () => {
+    expect(csvEscape('a\nb')).toBe('"a\nb"')
+  })
+
+  test('filename with CRLF should be quoted per RFC 4180', () => {
+    expect(csvEscape('a\r\nb')).toBe('"a\r\nb"')
+  })
 })

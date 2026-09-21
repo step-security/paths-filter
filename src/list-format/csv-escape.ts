@@ -4,7 +4,7 @@ export function csvEscape(value: string): string {
   if (value === '') return value
 
   // Only safe characters
-  if (/^[a-zA-Z0-9._+:@%/-]+$/m.test(value)) {
+  if (/^[a-zA-Z0-9._+:@%/-]+$/.test(value)) {
     return value
   }
 
