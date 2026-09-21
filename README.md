@@ -226,7 +226,7 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: step-security/paths-filter@v4
       id: filter
       with:
@@ -286,7 +286,7 @@ jobs:
     if: ${{ needs.changes.outputs.backend == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - ...
 
   # JOB to build and test frontend code
@@ -295,7 +295,7 @@ jobs:
     if: ${{ needs.changes.outputs.frontend == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - ...
 ```
 
@@ -334,7 +334,7 @@ jobs:
         package: ${{ fromJSON(needs.changes.outputs.packages) }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - ...
 ```
 
@@ -363,9 +363,9 @@ jobs:
     # Required permissions
     permissions:
       contents: read      # required by actions/checkout
-      pull-requests: read # required by dorny/paths-filter
+      pull-requests: read # required by dorstep-securityny/paths-filter
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: step-security/paths-filter@v4
       id: filter
       with:
@@ -386,7 +386,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
       with:
         # This may save additional git fetch roundtrip if
         # merge-base is found within latest 20 commits
@@ -414,7 +414,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
     - uses: step-security/paths-filter@v4
       id: filter
       with:
@@ -442,7 +442,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
       # Some action that modifies files tracked by git (e.g. code linter)
     - uses: johndoe/some-action@v1
@@ -550,7 +550,7 @@ jobs:
   <summary>Detect changes in multiple unrelated paths and exclude some file extensions</summary>
 
 ```yaml
-- uses: dorny/paths-filter@v4
+- uses: step-security/paths-filter@v4
   id: filter
   with:
     # With 'some-with-excludes' a file is matched when it matches at least one pattern
