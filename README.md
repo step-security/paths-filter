@@ -363,7 +363,7 @@ jobs:
     # Required permissions
     permissions:
       contents: read      # required by actions/checkout
-      pull-requests: read # required by dorstep-securityny/paths-filter
+      pull-requests: read # required by step-security/paths-filter
     steps:
     - uses: actions/checkout@v7
     - uses: step-security/paths-filter@v4
